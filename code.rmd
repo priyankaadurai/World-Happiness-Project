@@ -1,0 +1,314 @@
+---
+title: "code"
+format: html
+---
+
+```{r}
+library(tidyverse)
+install.packages("countrycode")
+library(countrycode)
+whr <- read_csv("whr-2023.csv") %>%
+  mutate(
+    Region = countrycode(`Country name`,
+                         origin    = "country.name",
+                         destination = "region")
+  ) %>%
+  filter(!is.na(Region))
+
+```
+
+Priyanka's Code
+South Asia:
+```{r}
+sa_countries <- whr %>%
+  filter(Region == "South Asia") %>%
+  select(-`Country name`, -year, -Region) 
+
+
+sa_countries %>%
+  cor(use = "complete.obs")
+
+```
+
+From the correlation matrix above (using a threshold of |0.7|), we opted to remove Life Ladder, Healthy life expectancy at birth and Positive affect.
+
+```{r}
+sa_model1 <- lm(`Life Ladder` ~ . - `Healthy life expectancy at birth` - `Positive affect`, data = sa_countries)
+
+summary(sa_model1)
+
+```
+We decided to use a 5% level of significance. Thus, we dropped Log GDP per capita, Freedom to make life choices, and Generosity.
+
+```{r}
+sa_model2 <- lm(`Life Ladder` ~ `Social support` + `Perceptions of corruption` + `Negative affect`, 
+                  data = sa_countries)
+summary(sa_model2)
+
+
+```
+Based on the model above, we can conclude that at a 5% significance level, only social support and negative affect are significant factors influencing life ladder in the South Asian region.
+
+```{r}
+residuals_data <- data.frame(
+  Fitted = fitted(sa_model2),
+  Residuals = resid(sa_model2)
+)
+
+# Create the plot
+ggplot(residuals_data, aes(x = Fitted, y = Residuals)) +
+  geom_point(color = "#0072B2", alpha = 0.6) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "#D55E00") +
+  geom_smooth(method = "loess", se = FALSE, color = "#CC79A7") +
+  labs(
+    title = "Residuals vs. Fitted Values",
+    subtitle = "Check for linearity and heteroscedasticity",
+    x = "Predicted Life Ladder Values", 
+    y = "Residuals"
+  ) +
+  theme_minimal() +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5))
+```
+
+Middle East & North Africa (MENA):
+```{r}
+mena_countries <- whr %>%
+  filter(Region == "Middle East & North Africa") %>%
+  select(-`Country name`, -year, -Region) 
+
+
+mena_countries %>%
+  cor(use = "complete.obs")
+
+```
+
+From the correlation matrix above (using a threshold of |0.7|), we remove Healthy life expectancy at birth due to multicollinearity.
+
+
+```{r}
+mena_model1 <- lm(`Life Ladder` ~ . - `Healthy life expectancy at birth`, data = mena_countries)
+
+summary(mena_model1)
+
+```
+We decided to use a 5% level of significance. Thus, we dropped Freedom to make life choices.
+
+```{r}
+mena_model2 <- lm(`Life Ladder` ~ . - `Healthy life expectancy at birth` - `Freedom to make life choices`, data = mena_countries)
+summary(mena_model2)
+```
+Based on the model above, we can conclude that at a 5% significance level, all of the above variables are significant factors influencing life ladder in the MENA region.
+
+
+Sub-Saharan Africa:
+```{r}
+s_africa_countries <- whr %>%
+  filter(Region == "Sub-Saharan Africa") %>%
+  select(-`Country name`, -year, -Region) 
+
+
+s_africa_countries %>%
+  cor(use = "complete.obs")
+
+```
+
+From the correlation matrix above (using a threshold of |0.7|), we don't need to remove any variables due to multicollinearity.
+
+
+```{r}
+s_africa_model1 <- lm(`Life Ladder` ~ ., data = s_africa_countries)
+
+summary(s_africa_model1)
+
+```
+We decided to use a 5% level of significance. Thus, we dropped Log GDP per capita and Healthy life expectancy at birth.
+
+```{r}
+s_africa_model2 <- lm(`Life Ladder` ~ . - `Healthy life expectancy at birth` - `Log GDP per capita`, data = s_africa_countries)
+
+summary(s_africa_model2)
+```
+Based on the model above, we can conclude that at a 5% significance level, everything excluding Generosity was a significant factor influencing life ladder in the Sub-Saharan African region. However, Social Support, Freedom to make life choices, Positive affect and Negative affect are more significant contributors to life ladder than Perceptions of corruption.
+
+```{r}
+install.packages("countrycode")
+library(ggplot2)
+library(tidyverse)
+library(countrycode)
+whr <- read_csv("whr-2023.csv") %>%
+  mutate(
+    Region = countrycode(`Country name`,
+                         origin    = "country.name",
+                         destination = "region")
+  ) %>%
+  filter(!is.na(Region))
+```
+```{r}
+unique(whr$Region)
+#3) ECA = "Europe & Central Asia", EAP = "East Asia & Pacific"
+ECA <- whr %>% filter(Region == "Europe & Central Asia")
+EAP <- whr %>% filter(Region == "East Asia & Pacific")
+```
+Analyze ECA:
+```{r}
+#4) MLR
+ECA_num <- ECA %>% select(-c(`Country name`,`year`,`Region`))
+ECA_lm <- lm(`Life Ladder` ~ ., data = ECA_num)
+summary(ECA_lm)
+```
+```{r}
+#5) correlation matrix
+cor(ECA_num,use = "complete.obs")
+
+#shorten for visualize
+ECA_num_s <- data.frame(LL = ECA_num$`Life Ladder`, GDP = ECA_num$`Log GDP per capita`, SS = ECA_num$`Social support`, HEB =  ECA_num$`Healthy life expectancy at birth`, FLC = ECA_num$`Freedom to make life choices`, G = ECA_num$`Generosity`, PC = ECA_num$`Perceptions of corruption`, PA = ECA_num$`Positive affect`, PN = ECA_num$`Negative affect`)
+
+cor(ECA_num_s,use = "complete.obs")
+
+```
+Here we see cor-matrix of variables. We assume 0.7 cor is too high, so we need to drop variables: Healthy life expectancy at birth (cor with GDP = 0.7859716), and Positive affect (cor with life choices = 0.7618484). To avoid multicollinearity.
+```{r}
+#6) remove 2 variables
+ECA_num_rem <- ECA_num %>% select(-c(`Healthy life expectancy at birth`,`Positive affect`))
+ECA_lm_new <- lm(`Life Ladder` ~ ., data = ECA_num_rem)
+summary(ECA_lm_new)
+```
+By the summary of the linear model, we can see that the P-values of all variables are below 5%. So we can say these variables have a significant effect on the Life Ladder of countries in Europe & Central Asia. However, negative affect does not have such a significant impact on the life ladder compared to the other five variables.
+```{r}
+# Create data frame from model
+model_data <- data.frame(
+  Fitted = fitted(ECA_lm_new),
+  Residuals = residuals(ECA_lm_new)
+)
+
+# Plot: residuals as points, fitted values as a line at y=0
+ggplot(model_data, aes(x = Fitted, y = Residuals)) +
+  geom_point(color = "red", alpha = 0.6) +                 # residuals as dots
+  geom_hline(yintercept = 0, color = "blue", linetype = "dashed") +  # fitted line
+  geom_smooth(method = "loess", se = FALSE, color = "green") + 
+  labs(title = "Residuals vs Fitted Values",
+       x = "Fitted Values",
+       y = "Residuals") +
+  theme_minimal()
+```
+
+
+Analyze EAP:
+```{r}
+#4) MLR
+EAP_num <- EAP %>% select(-c(`Country name`,`year`,`Region`))
+EAP_lm <- lm(`Life Ladder` ~ ., data = EAP_num)
+summary(EAP_lm)
+```
+```{r}
+#5) correlation matrix
+cor(EAP_num,use = "complete.obs")
+```
+Here we see cor-matrix of variables, we assume 0.7 cor is too high, so we need to drop variables: Healthy life expectancy at birth (cor with GDP = 0.9118113). To avoid multicollinearity.
+```{r}
+#6) remove 2 variables
+EAP_num_rem <- EAP_num %>% select(-c(`Healthy life expectancy at birth`))
+EAP_lm_new <- lm(`Life Ladder` ~ ., data = EAP_num_rem)
+summary(EAP_lm_new)
+```
+By the summary of the linear model, we can see that the P-value of Log GDP per capita, Social support, Perceptions of corruption, and Positive affect are below 5%. So we can say these variables have a significant effect on the Life Ladder of countries in East Asia & Pacific. However, Perceptions of corruption do not have such a significant impact on the life ladder compared to the other three variables.
+```{r}
+# Create data frame from model
+model_data <- data.frame(
+  Fitted = fitted(EAP_lm_new),
+  Residuals = residuals(EAP_lm_new)
+)
+
+# Plot: residuals as points, fitted values as a line at y=0
+ggplot(model_data, aes(x = Fitted, y = Residuals)) +
+  geom_point(color = "red", alpha = 0.6) +                 # residuals as dots
+  geom_hline(yintercept = 0, color = "blue", linetype = "dashed") +  # fitted line
+  geom_smooth(method = "loess", se = FALSE, color = "green") + 
+  labs(title = "Residuals vs Fitted Values",
+       x = "Fitted Values",
+       y = "Residuals") +
+  theme_minimal()
+```
+
+
+
+
+
+
+
+Josephs: 
+
+## Latin America & Caribbean:
+
+```{r, echo = FALSE}
+latin_countries <- whr %>%
+  filter(Region == "Latin America & Caribbean") %>%
+  select(-`Country name`, -year, -Region) 
+
+
+latin_countries %>%
+  cor(use = "complete.obs")
+
+```
+
+From the correlation matrix above (using a threshold of \|0.7\|), we see no significant multicollinearity and thus drop no variables.
+
+```{r, echo = FALSE}
+latin_model1 <- lm(`Life Ladder` ~ . , data = latin_countries)
+
+summary(latin_model1)
+```
+
+We decided to use a 5% level of significance. Thus, we dropped 2 variables ('Healthy life expectancy at birth' and 'Generosity') .
+
+```{r, echo = FALSE}
+latin_model2 <- lm(`Life Ladder` ~ . - `Healthy life expectancy at birth` - Generosity,
+                  data = latin_countries)
+summary(latin_model2)
+```
+
+Based on the model above, we can conclude that at a 5% significance level, all of the variables except for 'Healthy life expectancy at birth', 'Generosity', and 'Negative affect' are significant factors influencing life ladder in the Latin America region.
+
+
+
+
+
+## North America:
+
+```{r}
+na_countries <- whr %>%
+  filter(Region == "North America") %>%
+  select(-`Country name`, -year, -Region) 
+
+
+na_countries %>%
+  cor(use = "complete.obs")
+
+```
+
+From the correlation matrix above (using a threshold of \|0.7\|), we opt to remove 3 variables ('Log GDP per capita', 'Freedom to make life choices' , and 'Healthy life expectancy at birth') due to multicollinearity.
+
+```{r, echo = FALSE}
+na_model1 <- lm(`Life Ladder` ~ . - `Log GDP per capita` - 
+                  `Freedom to make life choices` - `Healthy life expectancy at birth`,
+                data = na_countries)
+
+summary(na_model1)
+```
+
+We decided to use a 5% level of significance. Thus, we dropped 3 variables ('Generosity', 'Perceptions of corruption' and 'Negative affect').
+
+```{r, echo = FALSE}
+na_model1 <- lm(`Life Ladder` ~ . - `Log GDP per capita` - 
+                  `Freedom to make life choices` - `Healthy life expectancy at birth` - 
+                  Generosity - `Perceptions of corruption` - `Negative affect`,
+                data = na_countries)
+
+summary(na_model1)
+```
+
+Based on the model above, we can conclude that at a 5% significance level, 'Social support' and 'Positive affect' are the only significant factors influencing life ladder in the Latin America region.
+
+
+
+
